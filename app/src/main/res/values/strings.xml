@@ -1,3 +1,9 @@
 <resources>
     <string name="app_name">MVVMTodo</string>
+    <string name="hint_task_name">Task name</string>
+    <string name="default_important_task">Important task</string>
+    <string name="date_created">Date created:</string>
+    <string name="default_item_contents">Example item</string>
+    <string name="description_confirm">Confirm</string>
+    <string name="content_description_priority_task">Priority Task</string>
 </resources>
