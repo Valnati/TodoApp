@@ -29,10 +29,10 @@ object AppModule {
     ) = Room.databaseBuilder(app, TaskDatabase::class.java, "task_database")
             .fallbackToDestructiveMigration()
             //callback is occurring in the TaskDatabase file, using argument above
-        .addCallback(callback)
+            .addCallback(callback)
             .build()
-        //will create a single database instance
-        //app, class literal, name
+            //will create a single database instance
+            //app, class literal, name
 
     @Provides
     fun provideTaskDao(db: TaskDatabase) = db.taskDao()
