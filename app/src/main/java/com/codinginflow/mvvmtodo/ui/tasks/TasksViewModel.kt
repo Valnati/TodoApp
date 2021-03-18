@@ -7,6 +7,7 @@ import androidx.lifecycle.asLiveData
 import androidx.lifecycle.viewModelScope
 import com.codinginflow.mvvmtodo.data.PreferencesManager
 import com.codinginflow.mvvmtodo.data.SortOrder
+import com.codinginflow.mvvmtodo.data.Task
 import com.codinginflow.mvvmtodo.data.TaskDao
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -46,6 +47,9 @@ class TasksViewModel @ViewModelInject constructor(
         taskDao.getTasks(query, filterPreferences.sortOrder, filterPreferences.hideCompleted)
     }
 
+    //now just watch that flow!
+    val tasks = tasksFlow.asLiveData()
+
     //on any change, these function can call the suspend functions in preferencesManager
     //they are actually called in the fragment
     fun onSortOrderSelected(sortOrder: SortOrder) = viewModelScope.launch {
@@ -56,6 +60,14 @@ class TasksViewModel @ViewModelInject constructor(
         preferencesManager.updateHideCompleted(hideCompleted)
     }
 
-    //now just watch that flow!
-    val tasks = tasksFlow.asLiveData()
+    fun onTaskSelected(task: Task) {
+
+    }
+
+    //need coroutine, as Dao functions are suspended
+    //must create copy of passed task, as Dao's properties are immutable
+    fun onTaskCheckChanged(task: Task, isChecked: Boolean) = viewModelScope.launch {
+        taskDao.update(task.copy(completed = isChecked))
+        //isChecked must update, all else will be identical
+    }
 }
