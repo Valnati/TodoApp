@@ -32,6 +32,8 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
     //this will be included too
     //viewModel is not destroyed on layout change, unlike fragments
     private val viewModel: TasksViewModel by viewModels()
+    //required to stop search query from persisting on rotation
+    private lateinit var searchView: SearchView
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -144,8 +146,19 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
         inflater.inflate(R.menu.menu_fragment_tasks, menu)
 
         val searchItem = menu.findItem(R.id.action_search)
-        val searchView = searchItem.actionView as SearchView
+
         //must cast this normal view into a searchView for androidx
+        //searchView sends empty string by default; make property to avoid this
+        searchView = searchItem.actionView as SearchView
+
+        //get any previous query if available
+        val pendingQuery = viewModel.searchQuery.value
+        if (pendingQuery != null && pendingQuery.isNotEmpty()) {
+            //expand magnifying glass into full search  bar
+            searchItem.expandActionView()
+            //place existing query into bar
+            searchView.setQuery(pendingQuery, false)
+        }
 
         //kotlin extension instead of loooong function
         searchView.onQueryTextChanged {
@@ -189,5 +202,11 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
             //click is somehow not handled; required
             else -> super.onOptionsItemSelected(item)
         }
+    }
+
+    //with this will never send unnecessary empty string, even on process death
+    override fun onDestroyView() {
+        super.onDestroyView()
+        searchView.setOnQueryTextListener(null)
     }
 }
