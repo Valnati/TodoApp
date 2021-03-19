@@ -1,5 +1,6 @@
 package com.codinginflow.mvvmtodo.ui
 
+import android.app.Activity
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import androidx.navigation.NavController
@@ -36,4 +37,10 @@ class MainActivity : AppCompatActivity() {
 
     //navgraph xml is taking other xmls and adding them to the single activity
     //seems to grab daggerhilt activity from ToDoApplication?
+
+    //in manifest, windowSoftInputMode adjust resize moves FAB along with keyboard
 }
+//custom event flags for the snackbar calls on confirming a new/edit task
+//first free value for dev use that won't get in the way (1)
+const val ADD_TASK_RESULT_OK = Activity.RESULT_FIRST_USER
+const val EDIT_TASK_RESULT_OK = Activity.RESULT_FIRST_USER + 1

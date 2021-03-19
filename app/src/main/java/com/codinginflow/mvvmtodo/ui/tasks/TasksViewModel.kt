@@ -7,6 +7,8 @@ import com.codinginflow.mvvmtodo.data.PreferencesManager
 import com.codinginflow.mvvmtodo.data.SortOrder
 import com.codinginflow.mvvmtodo.data.Task
 import com.codinginflow.mvvmtodo.data.TaskDao
+import com.codinginflow.mvvmtodo.ui.ADD_TASK_RESULT_OK
+import com.codinginflow.mvvmtodo.ui.EDIT_TASK_RESULT_OK
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
@@ -109,6 +111,17 @@ class TasksViewModel @ViewModelInject constructor(
         tasksEventChannel.send(TasksEvent.NavigateToAddTaskScreen)
     }
 
+    fun onAddEditResult(result: Int) {
+        when (result) {
+            ADD_TASK_RESULT_OK -> showTaskSavedConfirmationMessage("Task added")
+            EDIT_TASK_RESULT_OK -> showTaskSavedConfirmationMessage("Task updated")
+        }
+    }
+
+    private fun showTaskSavedConfirmationMessage(s: String) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.ShowTaskSavedConfirmationMessage(s))
+    }
+
     //this will govern the different events that can be sent
     sealed class  TasksEvent {
         //data class extends sealed class, allows for nonexhaustive when statement later
@@ -116,6 +129,7 @@ class TasksViewModel @ViewModelInject constructor(
         data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
         //singleton of item click to EditTask; with data to edit bundled
         data class NavigateToEditTaskScreen(val task: Task) : TasksEvent()
+        data class ShowTaskSavedConfirmationMessage(val msg: String) :TasksEvent()
         //singleton of fab button click to newTask
         object NavigateToAddTaskScreen: TasksEvent()
     }

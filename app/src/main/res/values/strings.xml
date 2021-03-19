@@ -14,4 +14,5 @@
     <string name="action_delete_all_completed">Delete all completed</string>
     <string name="fragment_title_new_task">New Task</string>
     <string name="fragment_title_edit_task">Edit Task</string>
+    <string name="validate_empty_name">Name cannot be empty</string>
 </resources>
