@@ -12,4 +12,6 @@
     <string name="action_sort_by_date_created">Sort by date created</string>
     <string name="action_hide_completed">Hide completed</string>
     <string name="action_delete_all_completed">Delete all completed</string>
+    <string name="fragment_title_new_task">New Task</string>
+    <string name="fragment_title_edit_task">Edit Task</string>
 </resources>

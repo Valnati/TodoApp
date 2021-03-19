@@ -1,9 +1,8 @@
 package com.codinginflow.mvvmtodo.ui.tasks
 
+import androidx.hilt.Assisted
 import androidx.hilt.lifecycle.ViewModelInject
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.*
 import com.codinginflow.mvvmtodo.data.PreferencesManager
 import com.codinginflow.mvvmtodo.data.SortOrder
 import com.codinginflow.mvvmtodo.data.Task
@@ -18,7 +17,8 @@ import kotlinx.coroutines.launch
 class TasksViewModel @ViewModelInject constructor(
 //viewmodels have special inject but otherwise are the same
     private val taskDao: TaskDao,
-    private val preferencesManager: PreferencesManager
+    private val preferencesManager: PreferencesManager,
+    @Assisted private val state: SavedStateHandle
 ): ViewModel() {
     //get flow of list of tasks - flow is reactive data source
     //so viewmodel doesn't need reference to fragment, it just holds data up
@@ -28,7 +28,10 @@ class TasksViewModel @ViewModelInject constructor(
     //use flow below viewmodel, livedata at viewmodel for good results
 
     //this allows for searches to be custom, holds single value as a flow
-    val searchQuery = MutableStateFlow("")
+    //was MutableStateFlow, now is liveData to be able to put in SavedStateHandle
+    //no Type needed; compiler will intuit it
+    //still get persistence, saved data will change as it does
+    val searchQuery = state.getLiveData("searchQuery", "")
 
     //default state of list is defined here, then whatever user decides
     val preferencesFlow = preferencesManager.preferencesFlow
@@ -43,7 +46,8 @@ class TasksViewModel @ViewModelInject constructor(
     //stopping observation
     //combine all flows with the combine keyword, then lambda to pass all values when one changes
     private val tasksFlow = combine(
-        searchQuery,
+        //turn liveData back into a flow
+        searchQuery.asFlow(),
         preferencesFlow
     ) { query, filterPreferences ->
         //wrap into a single return value
@@ -66,9 +70,9 @@ class TasksViewModel @ViewModelInject constructor(
         preferencesManager.updateHideCompleted(hideCompleted)
     }
 
-    //this behavior is implemented in check changed below, as only one action is available
-    fun onTaskSelected(task: Task) {
-
+    //this behavior is for choosing a single list item to edit
+    fun onTaskSelected(task: Task) = viewModelScope.launch {
+        tasksEventChannel.send(TasksEvent.NavigateToEditTaskScreen(task))
     }
 
     //need coroutine, as Dao functions are suspended
@@ -100,10 +104,19 @@ class TasksViewModel @ViewModelInject constructor(
         taskDao.insert(task)
     }
 
+    fun onAddNewTaskClick() = viewModelScope.launch{
+        //as with swipe, emit to the fragment so it knows what to do
+        tasksEventChannel.send(TasksEvent.NavigateToAddTaskScreen)
+    }
+
     //this will govern the different events that can be sent
     sealed class  TasksEvent {
         //data class extends sealed class, allows for nonexhaustive when statement later
         //tells compiler no other events except those defined here
         data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
+        //singleton of item click to EditTask; with data to edit bundled
+        data class NavigateToEditTaskScreen(val task: Task) : TasksEvent()
+        //singleton of fab button click to newTask
+        object NavigateToAddTaskScreen: TasksEvent()
     }
 }

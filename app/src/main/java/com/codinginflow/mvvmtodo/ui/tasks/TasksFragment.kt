@@ -9,6 +9,7 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,6 +17,7 @@ import com.codinginflow.mvvmtodo.R
 import com.codinginflow.mvvmtodo.data.SortOrder
 import com.codinginflow.mvvmtodo.data.Task
 import com.codinginflow.mvvmtodo.databinding.FragmentTasksBinding
+import com.codinginflow.mvvmtodo.util.exhaustive
 import com.codinginflow.mvvmtodo.util.onQueryTextChanged
 import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,6 +66,11 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
                     viewModel.onTaskSwiped(task)
                 }
             }).attachToRecyclerView(recyclerViewTasks)
+
+            fabAddTask.setOnClickListener {
+                //as always, viewModel gets the behavior
+                viewModel.onAddNewTaskClick()
+            }
         }
 
         //when lambda is last argument, can use trailing lambda syntax, like here
@@ -78,6 +85,8 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
         viewLifecycleOwner.lifecycleScope.launchWhenStarted {
             //possible to name the returned object, so event instead of it here
             viewModel.tasksEvent.collect { event ->
+                //with .exhaustive (from Utils), when is now expression,
+                //so it won't compile without all possible events covered
                 when (event) {
                     //make snackbar only when catching/consuming this event!
                     is TasksViewModel.TasksEvent.ShowUndoDeleteTaskMessage -> {
@@ -88,7 +97,21 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
                                 viewModel.onUndoDeleteClick(event.task)
                             }.show()
                     }
-                }
+                    //here's our navigations to other fragments
+                    TasksViewModel.TasksEvent.NavigateToAddTaskScreen -> {
+                        //could just navigate to specific layer, but action var forces compile time safety
+                        //title is hardcoded in for the activity name, depending on how we got there
+                        val action = TasksFragmentDirections.actionTasksFragmentToAddEditTaskFragment(null, getString(
+                                                    R.string.fragment_title_new_task))
+                        findNavController().navigate(action)
+                    }
+                    is TasksViewModel.TasksEvent.NavigateToEditTaskScreen -> {
+                        //just send in the clicked task, otherwise the same
+                        val action = TasksFragmentDirections.actionTasksFragmentToAddEditTaskFragment(event.task, getString(
+                                                    R.string.fragment_title_edit_task))
+                        findNavController().navigate(action)
+                    }
+                }.exhaustive
             }
         }
 
