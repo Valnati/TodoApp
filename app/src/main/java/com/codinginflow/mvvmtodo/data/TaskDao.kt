@@ -29,6 +29,10 @@ interface TaskDao {
 
     @Delete
     suspend fun delete(task: Task)
+
+    //custom query for deleting everything
+    @Query( "DELETE FROM task_table WHERE completed = 1")
+    suspend fun deleteCompletedTasks()
 }
 
 //suspend is part of coroutines - allows for thread switching
