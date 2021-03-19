@@ -1,6 +1,5 @@
 package com.codinginflow.mvvmtodo.ui.tasks
 
-import android.bluetooth.BluetoothHidDevice
 import androidx.hilt.lifecycle.ViewModelInject
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.asLiveData
@@ -9,9 +8,11 @@ import com.codinginflow.mvvmtodo.data.PreferencesManager
 import com.codinginflow.mvvmtodo.data.SortOrder
 import com.codinginflow.mvvmtodo.data.Task
 import com.codinginflow.mvvmtodo.data.TaskDao
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.receiveAsFlow
 import kotlinx.coroutines.launch
 
 class TasksViewModel @ViewModelInject constructor(
@@ -32,6 +33,11 @@ class TasksViewModel @ViewModelInject constructor(
     //default state of list is defined here, then whatever user decides
     val preferencesFlow = preferencesManager.preferencesFlow
 
+    //the variable for calling snackbar as an event
+    //expose the flow, not the channel, so fragment can't input into the channel
+    private val tasksEventChannel = Channel<TasksEvent>()
+    val tasksEvent = tasksEventChannel.receiveAsFlow()
+
     //when a value changes, execute and use the given value
     //it will run the search query again and switch flows to new search, without
     //stopping observation
@@ -50,7 +56,7 @@ class TasksViewModel @ViewModelInject constructor(
     //now just watch that flow!
     val tasks = tasksFlow.asLiveData()
 
-    //on any change, these function can call the suspend functions in preferencesManager
+    //on any change, these functions can call the suspend functions in preferencesManager
     //they are actually called in the fragment
     fun onSortOrderSelected(sortOrder: SortOrder) = viewModelScope.launch {
         preferencesManager.updateSortOrder(sortOrder)
@@ -60,6 +66,7 @@ class TasksViewModel @ViewModelInject constructor(
         preferencesManager.updateHideCompleted(hideCompleted)
     }
 
+    //this behavior is implemented in check changed below, as only one action is available
     fun onTaskSelected(task: Task) {
 
     }
@@ -69,5 +76,34 @@ class TasksViewModel @ViewModelInject constructor(
     fun onTaskCheckChanged(task: Task, isChecked: Boolean) = viewModelScope.launch {
         taskDao.update(task.copy(completed = isChecked))
         //isChecked must update, all else will be identical
+    }
+
+    //behavior for when an item is swiped on
+    //delete is suspended function so need a coroutine
+    //and taskDao has this behavior set up already
+    fun onTaskSwiped(task: Task) = viewModelScope.launch {
+        taskDao.delete(task)
+        //and show snackbar in viewModel
+        //but need to dispatch event, or snackbar would live longer than the fragment itself
+        //butlivedata/mutablestateflow keep latest value
+        //they will connect to old viewmodel and get newest livedata
+        //they are not consumed once and gone, they stay around
+        //so instead use channels - send data between coroutines
+        //send objects (events) to fragment, which consumes them
+        //channels are launched in coroutine either side, can suspend in background
+        tasksEventChannel.send(TasksEvent.ShowUndoDeleteTaskMessage(task))
+
+    }
+
+    //if the snackbar's undo button is pressed
+    fun onUndoDeleteClick(task: Task) = viewModelScope.launch {
+        taskDao.insert(task)
+    }
+
+    //this will govern the different events that can be sent
+    sealed class  TasksEvent {
+        //data class extends sealed class, allows for nonexhaustive when statement later
+        //tells compiler no other events except those defined here
+        data class ShowUndoDeleteTaskMessage(val task: Task): TasksEvent()
     }
 }

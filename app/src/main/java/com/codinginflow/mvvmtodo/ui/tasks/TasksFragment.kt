@@ -9,13 +9,17 @@ import androidx.appcompat.widget.SearchView
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.ItemTouchHelper
 import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.codinginflow.mvvmtodo.R
 import com.codinginflow.mvvmtodo.data.SortOrder
 import com.codinginflow.mvvmtodo.data.Task
 import com.codinginflow.mvvmtodo.databinding.FragmentTasksBinding
 import com.codinginflow.mvvmtodo.util.onQueryTextChanged
+import com.google.android.material.snackbar.Snackbar
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collect
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -41,12 +45,51 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
                 //get layout, and use fragment method??
                 setHasFixedSize(true)
             }
+
+            //built in package to help with swiping
+            //swipe only is dragDirs, which isn't used
+            ItemTouchHelper(object: ItemTouchHelper.SimpleCallback(0,
+                ItemTouchHelper.LEFT or ItemTouchHelper.RIGHT) {
+                //unnecessary method here, for drag and dropping
+                override fun onMove(
+                    recyclerView: RecyclerView,
+                    viewHolder: RecyclerView.ViewHolder,
+                    target: RecyclerView.ViewHolder
+                ): Boolean {
+                    return false
+                }
+
+                override fun onSwiped(viewHolder: RecyclerView.ViewHolder, direction: Int) {
+                    val task = taskAdapter.currentList[viewHolder.adapterPosition]
+                    viewModel.onTaskSwiped(task)
+                }
+            }).attachToRecyclerView(recyclerViewTasks)
         }
 
         //when lambda is last argument, can use trailing lambda syntax, like here
         viewModel.tasks.observe(viewLifecycleOwner) {
             //send updated data to the adapter (it is the thing in question it seems)
             taskAdapter.submitList(it)
+        }
+
+        //for catching and consuming snackbar events
+        //launchWhenStarted will remove this coroutine with onStop/onStart, limiting lifecycle
+        //don't listen to events while in the background
+        viewLifecycleOwner.lifecycleScope.launchWhenStarted {
+            //possible to name the returned object, so event instead of it here
+            viewModel.tasksEvent.collect { event ->
+                when (event) {
+                    //make snackbar only when catching/consuming this event!
+                    is TasksViewModel.TasksEvent.ShowUndoDeleteTaskMessage -> {
+                        Snackbar.make(requireView(), "Task deleted", Snackbar.LENGTH_LONG)
+                            .setAction("UNDO") {
+                                //and have viewModel actually conduct the behavior
+                                //smart cast to get task sent from viewModel, send back to viewModel
+                                viewModel.onUndoDeleteClick(event.task)
+                            }.show()
+                    }
+                }
+            }
         }
 
         setHasOptionsMenu(true)
@@ -73,7 +116,7 @@ class TasksFragment : Fragment(R.layout.fragment_tasks), TasksAdapter.OnItemClic
             viewModel.searchQuery.value = it
         }
 
-        //for checking hide completed status, usecoroutine scope, lives as long as fragment
+        //for checking hide completed status, uses coroutine scope, lives as long as fragment
         viewLifecycleOwner.lifecycleScope.launch {
             menu.findItem(R.id.action_hide_completed_tasks).isChecked =
                     //look in viewModel once to get status, it will update itself after
