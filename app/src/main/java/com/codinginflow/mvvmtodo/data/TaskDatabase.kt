@@ -21,7 +21,7 @@ abstract class TaskDatabase : RoomDatabase() {
     //use dagger hilt in android to make dagger easy to use
     abstract fun taskDao(): TaskDao
 
-    //we are injecting through dagger, with whatever is provided to constructori
+    //we are injecting through dagger, with whatever is provided to constructor
     class Callback @Inject constructor(
         //provider needed to avoid circular dependency; wait until databasebuilder is done
         private val database: Provider<TaskDatabase>,

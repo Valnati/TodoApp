@@ -12,7 +12,7 @@ import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
 class MainActivity : AppCompatActivity() {
-    //TODO: lateinit allows initializing a non-null property outside the constructor
+    //lateinit allows initializing a non-null property outside the constructor
     private lateinit var navController: NavController
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
